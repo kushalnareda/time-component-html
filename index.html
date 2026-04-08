@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Time Picker Component</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb;
+        }
+
+        /* Input styling to match the minimal bottom-border design */
+        .time-input {
+            border-bottom: 1px solid #e5e7eb;
+            transition: border-color 0.2s;
+        }
+        
+        .time-input:focus {
+            outline: none;
+            border-bottom-color: #164e63; /* A deep color for focus state */
+        }
+
+        /* Popover styling */
+        .time-popover {
+            box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.1), 0 0 8px rgba(0,0,0,0.04);
+            transform-origin: top center;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            opacity: 0;
+            transform: scale(0.95) translateY(-10px);
+            pointer-events: none;
+        }
+
+        .time-popover.active {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            pointer-events: auto;
+        }
+
+        /* SVG Arrow buttons */
+        .arrow-btn {
+            color: #0f5132; /* Deep green matching the image */
+            border-radius: 6px;
+            padding: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .arrow-btn:hover {
+            background-color: #ecfdf5;
+        }
+
+        .time-text-green {
+            color: #0f5132;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <!-- Container matching the white card-like background in the image snippet -->
+    <div class="bg-white p-12 w-[400px] flex flex-col gap-10 border border-gray-100 shadow-sm rounded-xl">
+        
+        <!-- Start Time Field (Closed State) -->
+        <div class="relative w-full time-picker-container" data-time="16:17">
+            <label class="block text-sm font-medium text-gray-900 mb-1">Start Time</label>
+            <div class="relative select-none">
+                <input type="text" value="16:17" placeholder="HH:MM"
+                       class="time-input w-full text-2xl pb-2 bg-transparent text-gray-900" />
+                <div class="absolute right-2 bottom-3 text-gray-400 pointer-events-none">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                </div>
+            </div>
+            
+            <!-- Popover -->
+            <div class="time-popover absolute z-10 bg-white rounded-xl p-5 flex items-center justify-center gap-6" style="top: 100%; right: -20px; margin-top: 8px;">
+                <!-- Content injected via JS to avoid duplication -->
+            </div>
+        </div>
+
+        <!-- End Time Field (Open State Demo) -->
+        <div class="relative w-full time-picker-container" data-time="16:17">
+            <label class="block text-sm font-medium text-gray-900 mb-1 text-lg">End Time</label>
+            <div class="relative select-none">
+                <input type="text" value="16:17" placeholder="HH:MM"
+                       class="time-input w-full text-2xl pb-2 bg-transparent text-gray-900" />
+                <!-- Hidden icon on open state or keeping it is fine, image doesn't show icon clearly for End Time but implies standard behavior -->
+            </div>
+
+            <!-- Popover -->
+            <div class="time-popover absolute z-10 bg-white rounded-xl p-6 flex items-center justify-center gap-5" style="top: 100%; right: 0; margin-top: 8px;">
+                <!-- Hours Column -->
+                <div class="flex flex-col items-center gap-4">
+                    <button class="arrow-btn hour-up" aria-label="Increase hour">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                    </button>
+                    <span class="text-xl font-medium time-text-green hour-display">16</span>
+                    <button class="arrow-btn hour-down" aria-label="Decrease hour">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                </div>
+
+                <!-- Colon Separator -->
+                <span class="text-xl font-medium text-gray-900 pb-1">:</span>
+
+                <!-- Minutes Column -->
+                <div class="flex flex-col items-center gap-4">
+                    <button class="arrow-btn min-up" aria-label="Increase minute">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                    </button>
+                    <span class="text-xl font-medium time-text-green min-display">17</span>
+                    <button class="arrow-btn min-down" aria-label="Decrease minute">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Component Template for the Popover interior to keep HTML clean
+        const popoverTemplate = `
+            <div class="flex flex-col items-center gap-4">
+                <button class="arrow-btn hour-up" aria-label="Increase hour">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                </button>
+                <span class="text-xl font-medium time-text-green hour-display">00</span>
+                <button class="arrow-btn hour-down" aria-label="Decrease hour">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+            </div>
+            <span class="text-xl font-medium text-gray-900 pb-1">:</span>
+            <div class="flex flex-col items-center gap-4">
+                <button class="arrow-btn min-up" aria-label="Increase minute">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                </button>
+                <span class="text-xl font-medium time-text-green min-display">00</span>
+                <button class="arrow-btn min-down" aria-label="Decrease minute">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+            </div>
+        `;
+
+        class TimePicker {
+            constructor(containerElement) {
+                this.container = containerElement;
+                this.input = this.container.querySelector('input');
+                this.popover = this.container.querySelector('.time-popover');
+                
+                // Inject template if empty or missing the controls (for the Start Time field)
+                if (!this.popover.querySelector('.hour-up')) {
+                    this.popover.innerHTML = popoverTemplate;
+                }
+
+                // Parse initial time
+                const initialTime = this.container.dataset.time || "12:00";
+                const [h, m] = initialTime.split(':').map(Number);
+                this.hours = h;
+                this.minutes = m;
+
+                this.initDOMRefs();
+                this.bindEvents();
+                this.updateDisplay();
+            }
+
+            initDOMRefs() {
+                this.hourDisplay = this.popover.querySelector('.hour-display');
+                this.minDisplay = this.popover.querySelector('.min-display');
+                this.btnHourUp = this.popover.querySelector('.hour-up');
+                this.btnHourDown = this.popover.querySelector('.hour-down');
+                this.btnMinUp = this.popover.querySelector('.min-up');
+                this.btnMinDown = this.popover.querySelector('.min-down');
+            }
+
+            bindEvents() {
+                // Open popover on input click or focus
+                this.input.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.openPopover();
+                });
+
+                this.input.addEventListener('focus', () => {
+                    this.input.select(); // Senior UX: highlight text for quick overwrite
+                    this.openPopover();
+                });
+
+                // Prevent closing when clicking inside popover and keep input focused
+                this.popover.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+
+                this.popover.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+
+                // Handle smart input masking real-time
+                this.input.addEventListener('input', (e) => this.handleSmartInput(e));
+                
+                // Clean up and auto-complete on blur
+                this.input.addEventListener('blur', () => this.handleBlur());
+                
+                this.input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        this.handleBlur();
+                        this.closePopover();
+                        this.input.blur();
+                    } else if (e.key === 'Escape') {
+                        this.closePopover();
+                        this.input.blur();
+                    }
+                });
+
+                // Control Buttons logic
+                this.btnHourUp.addEventListener('click', () => this.changeHour(1));
+                this.btnHourDown.addEventListener('click', () => this.changeHour(-1));
+                this.btnMinUp.addEventListener('click', () => this.changeMinute(1));
+                this.btnMinDown.addEventListener('click', () => this.changeMinute(-1));
+            }
+
+            handleSmartInput(e) {
+                // Allow backspace/delete to work naturally without forcing re-formatting
+                if (e.inputType && e.inputType.startsWith('delete')) {
+                    if (this.input.value.length === 5) this.handleBlur();
+                    return;
+                }
+
+                // Strip non-digits
+                let val = this.input.value.replace(/[^0-9]/g, '');
+
+                // Rule 1: If first digit is 3-9, pad with 0 (e.g. "3" -> "03:")
+                if (val.length >= 1) {
+                    let h1 = parseInt(val[0]);
+                    if (h1 > 2) {
+                        val = '0' + val;
+                    }
+                }
+
+                // Rule 2: If hour would be > 23 (e.g. typing 2 then 4+), shift to 02:4...
+                if (val.length >= 2) {
+                    let h1 = parseInt(val[0]);
+                    let h2 = parseInt(val[1]);
+                    if (h1 === 2 && h2 > 3) {
+                        val = '0' + val[0] + val.substring(1);
+                    }
+                }
+
+                // Rule 3: Minute tens digit cannot be > 5 (e.g. typing "12:6" drops the 6)
+                if (val.length >= 3) {
+                    let m1 = parseInt(val[2]);
+                    if (m1 > 5) {
+                        val = val.substring(0, 2) + val.substring(3); // Drop invalid digit
+                    }
+                }
+
+                // Cap at 4 digits
+                val = val.substring(0, 4);
+
+                // Format with colon automatically
+                let formatted = val;
+                if (val.length >= 3) {
+                    formatted = val.substring(0, 2) + ':' + val.substring(2);
+                } else if (val.length === 2) {
+                    formatted = val + ':';
+                }
+
+                this.input.value = formatted;
+
+                // Sync popover immediately when valid 5-char length is reached
+                if (formatted.length === 5) {
+                    this.handleBlur();
+                }
+            }
+
+            handleBlur() {
+                let val = this.input.value.replace(/[^0-9]/g, '');
+                
+                if (val.length > 0) {
+                    // Senior UX: Auto-pad missing digits (e.g., "9" -> "09:00", "12:3" -> "12:30")
+                    while (val.length < 4) {
+                        val += '0';
+                    }
+                    this.hours = parseInt(val.substring(0, 2), 10);
+                    this.minutes = parseInt(val.substring(2, 4), 10);
+                } else {
+                    // Reset to 00:00 if user clears the input
+                    this.hours = 0;
+                    this.minutes = 0;
+                }
+                
+                this.updateDisplay();
+            }
+
+            changeHour(delta) {
+                this.hours = (this.hours + delta + 24) % 24;
+                this.updateDisplay();
+            }
+
+            changeMinute(delta) {
+                this.minutes = (this.minutes + delta + 60) % 60;
+                this.updateDisplay();
+            }
+
+            formatNumber(num) {
+                return num.toString().padStart(2, '0');
+            }
+
+            updateDisplay() {
+                const formattedHour = this.formatNumber(this.hours);
+                const formattedMin = this.formatNumber(this.minutes);
+                
+                this.hourDisplay.textContent = formattedHour;
+                this.minDisplay.textContent = formattedMin;
+                this.input.value = `${formattedHour}:${formattedMin}`;
+                
+                // Update dataset for external access if needed
+                this.container.dataset.time = this.input.value;
+            }
+
+            openPopover() {
+                // Close all other popovers first
+                document.querySelectorAll('.time-popover').forEach(p => {
+                    if (p !== this.popover) p.classList.remove('active');
+                });
+                
+                this.popover.classList.add('active');
+            }
+
+            togglePopover() {
+                if (this.popover.classList.contains('active')) {
+                    this.closePopover();
+                } else {
+                    this.openPopover();
+                }
+            }
+
+            closePopover() {
+                this.popover.classList.remove('active');
+            }
+        }
+
+        // Initialize all time pickers on the page
+        document.addEventListener('DOMContentLoaded', () => {
+            const pickers = [];
+            document.querySelectorAll('.time-picker-container').forEach(container => {
+                pickers.push(new TimePicker(container));
+            });
+
+            // Global click to close popovers when clicking outside
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.time-popover').forEach(p => p.classList.remove('active'));
+            });
+            
+            // To match the screenshot precisely for preview purposes, open the second popover automatically
+            const secondPickerPopover = document.querySelectorAll('.time-popover')[1];
+            if(secondPickerPopover) {
+                setTimeout(() => {
+                    secondPickerPopover.classList.add('active');
+                }, 100);
+            }
+        });
+    </script>
+</body>
+</html>
